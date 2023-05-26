@@ -7,7 +7,7 @@ namespace KiwiBankomaten
     public class Customer : User
     {
         public Dictionary<int, BankAccount> BankAccounts;
-        internal Dictionary<int, LoanAccount> LoanAccounts;
+        public Dictionary<int, LoanAccount> LoanAccounts;
 
         // Used for creating test customers.
         public Customer(int id, string username, string password, bool locked)
@@ -62,12 +62,19 @@ namespace KiwiBankomaten
             string accountName = ChooseAccountName();
             // Gets currency choice from Customer
             string currency = ChooseCurrency();
+
+            CreateAccount(interest, accountName, currency);
+
+            // Asks user if they want to put money into new account, if yes money is created in account.
+            InsertMoneyIntoNewAccount(interest);
+        }
+
+        public void CreateAccount(decimal interest, string accountName, string currency)
+        {
             // Gets the highest key present and adds one to get new key
             int index = BankAccounts.Keys.Max() + 1;
             // Adds the new account to customers account dictionary
             BankAccounts.Add(index, new BankAccount(accountName, currency, interest));
-            // Asks user if they want to put money into new account, if yes money is created in account.
-            InsertMoneyIntoNewAccount(interest);
         }
 
         // Lets the customer choose what type of account to open.
@@ -571,6 +578,21 @@ namespace KiwiBankomaten
                 }
             } while (Utility.YesOrNo($"Du tar nu ett Lån på {Utility.AmountDecimal(amountMoney)} kronor", "Vill du godkänna detta? [J/N]"));
 
+            int index = OpenLoanAccount(userChoice, amountMoney);
+
+            UserInterface.CurrentMethodGreen($"Summan har nu anlänt på {BankAccounts[1].AccountName}");
+            UserInterface.CurrentMethod("Nytt lånekonto har skapats.");
+
+            // Adds transaction to log, first bank account is shown as
+            // having received money from the loan account.
+            BankAccounts[1].LogList.Add(new Log(amountMoney, LoanAccounts[index].AccountNumber));
+
+            LoanAccountOverview();
+
+        }
+
+        public int OpenLoanAccount(string userChoice, decimal amountMoney)
+        {
             // Gets the highest key present and adds one to get new key
             int index;
             if (LoanAccounts.Count < 1)
@@ -586,16 +608,7 @@ namespace KiwiBankomaten
                 amountMoney - (amountMoney * 2), DataBase.LoanAccountTypes[userChoice]));
             // Adds the loaned amount to customers standard account
             BankAccounts[1].Amount += amountMoney;
-
-            UserInterface.CurrentMethodGreen($"Summan har nu anlänt på {BankAccounts[1].AccountName}");
-            UserInterface.CurrentMethod("Nytt lånekonto har skapats.");
-
-            // Adds transaction to log, first bank account is shown as
-            // having received money from the loan account.
-            BankAccounts[1].LogList.Add(new Log(amountMoney, LoanAccounts[index].AccountNumber));
-
-            LoanAccountOverview();
-
+            return index;
         }
 
         // Method for choosing what type of loan account.
